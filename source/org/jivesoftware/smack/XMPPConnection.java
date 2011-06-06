@@ -428,6 +428,8 @@ public class XMPPConnection extends Connection {
 
     public void disconnect(Presence unavailablePresence) {
         // If not connected, ignore this request.
+        PacketReader packetReader = this.packetReader;
+        PacketWriter packetWriter = this.packetWriter;
         if (packetReader == null || packetWriter == null) {
             return;
         }
@@ -438,13 +440,14 @@ public class XMPPConnection extends Connection {
             roster.cleanup();
             roster = null;
         }
+        chatManager = null;
 
         wasAuthenticated = false;
 
         packetWriter.cleanup();
-        packetWriter = null;
+        this.packetWriter = null;
         packetReader.cleanup();
-        packetReader = null;
+        this.packetReader = null;
     }
 
     public void sendPacket(Packet packet) {
@@ -541,18 +544,18 @@ public class XMPPConnection extends Connection {
      * @throws XMPPException if establishing a connection to the server fails.
      */
     private void initConnection() throws XMPPException {
+        PacketReader packetReader = this.packetReader;
+        PacketWriter packetWriter = this.packetWriter;
         boolean isFirstInitialization = packetReader == null || packetWriter == null;
-        if (!isFirstInitialization) {
-            usingCompression = false;
-        }
+        usingCompression = false;
 
         // Set the reader and writer instance variables
         initReaderAndWriter();
 
         try {
             if (isFirstInitialization) {
-                packetWriter = new PacketWriter(this);
-                packetReader = new PacketReader(this);
+                this.packetWriter = packetWriter = new PacketWriter(this);
+                this.packetReader = packetReader = new PacketReader(this);
 
                 // If debugging is enabled, we should start the thread that will listen for
                 // all packets and then log them.
@@ -601,14 +604,14 @@ public class XMPPConnection extends Connection {
                     packetWriter.shutdown();
                 }
                 catch (Throwable ignore) { /* ignore */ }
-                packetWriter = null;
+                this.packetWriter = null;
             }
             if (packetReader != null) {
                 try {
                     packetReader.shutdown();
                 }
                 catch (Throwable ignore) { /* ignore */ }
-                packetReader = null;
+                this.packetReader = null;
             }
             if (reader != null) {
                 try {
@@ -632,6 +635,7 @@ public class XMPPConnection extends Connection {
                 socket = null;
             }
             this.setWasAuthenticated(authenticated);
+            chatManager = null;
             authenticated = false;
             connected = false;
 
